@@ -1,5 +1,0 @@
-oracle.assistants.asm|S_ASMPASSWORD=oracle_4U
-oracle.assistants.asm|S_ASMMONITORPASSWORD=oracle_4U
-oracle.crs|oracle_install_crs_ConfigureMgmtDB=FALSE
-oracle.crs|oracle_install_crs_MgmtDB_CDB=FALSE
-oracle.crs|oracle_install_crs_MgmtDB_Std=FALSE

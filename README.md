@@ -1,144 +1,64 @@
-# openshift-enablement-exam
+# Installing sigstore pipeline on OCP
 
-The following instructions will setup an OpenShift OCP 3.3 environment on Google Cloud compliant with the following reference architecture.
+## Install Vault + transit KMS for sigstore
 
-![GCP reference architecture](./media/OSE-on-GCE-Architecture-v0.3.png)
+```sh
+helm repo add hashicorp https://helm.releases.hashicorp.com
+oc new-project vault
+oc adm policy add-role-to-user admin -z vault -n vault
+export cluster_base_domain=$(oc get dns cluster -o jsonpath='{.spec.baseDomain}')
+helm upgrade vault hashicorp/vault -i --create-namespace -n vault --atomic -f ./vault/vault-values.yaml --set server.route.host=vault-vault.apps.${cluster_base_domain}
 
+#configure kube auth
+export VAULT_ADDR=https://vault-vault.apps.${cluster_base_domain}
+export VAULT_TOKEN=$(oc get secret vault-init -n vault -o jsonpath='{.data.root_token}' | base64 -d )
+# this policy is intentionally broad to allow to test anything in Vault. In a real life scenario this policy would be scoped down.
+vault policy write vault-admin  ./vault/vault-admin-policy.hcl
+vault auth enable kubernetes
+vault write auth/kubernetes/config kubernetes_host=https://kubernetes.default.svc:443
+vault write auth/kubernetes/role/ci-system bound_service_account_names=pipeline bound_service_account_namespaces='*' policies=vault-admin ttl=10s
 
-attention: this is all deprecated now.
-
-## 3.6 changes
-
-updated to 3.6
-service catalog does not seem to install so it's disabled
-you can now choose to install gluster with the following variable GLUSTER=yes
-
-
-## Setup
-
-Clone this project
-
-```
-git clone https://github.com/raffaelespazzoli/openshift-enablement-exam
-cd openshift-enablement-exam
-```
-
-Create a [new google cloud project](https://cloud.google.com/resource-manager/docs/creating-project).
-
-Install the [command line tool](https://cloud.google.com/sdk/downloads).
-
-[Initialize and authenticate in gcloud](https://cloud.google.com/sdk/docs/authorizing).
-
-In order to run this provisioning script you will need to be able to run 34vCPU, 3 global static IP addresses, and 10 in-use IP addresses in the US central region. You may need to increase your [resource quota](https://cloud.google.com/compute/docs/resource-quotas).
-
-Enable your project to use the compute api by visiting the [compute engine](https://console.cloud.google.com/home) menu item (there is probably a better way to do it).
-
-Set your google project configuration
-```
-export GCLOUD_PROJECT=<your project>
-```
-set your dns zone (es: exam.example.com). The name of the zone should be the same name of your google project.
-your master will be available at `master.exam.example.com` and the routes will have the form `*.apps.exam.example.com`.
-
-you need to externally configure your domain to point to google cloud dns. More explanations [here] (https://cloud.google.com/dns/update-name-servers)
-```
-export DNS_DOMAIN=<your domain>
-```
-Set you RHN account credentials.
-```
-export RHN_USERNAME=rhn-gps-rspazzol
-export RHN_PASSWORD=xxx
-```
-define which key you want to use, this key must be available to the following ssh commands
-```
-export SSH_PUB_KEY=<the ssh pub key you want to use> #usually $HOME/.ssh/id_rsa.pub
-```
-Set the RHEL pool you want to use:
-```
-export RHN_SUB_POOL=8a85f9843e3d687a013e3ddd471a083e
-```
-I recommend having a script that sets up all your variables:
-```
-export GCLOUD_PROJECT=openshift-enablement-exam2
-export DNS_DOMAIN=gc2.raffa.systems
-export RHN_USERNAME=rhn-gps-rspazzol
-export RHN_PASSWORD=XXXX
-export SSH_PUB_KEY=$HOME/.ssh/id_rsa.pub
-export RHN_SUB_POOL=8a85f9843e3d687a013e3ddd471a083e
-```
-If you are courageous you can just run:
-```
-./allinone.sh
-```
-but at least the first time, I recommend following the below scripts.
-
-Another option is to deploy using google cloud deployment (a declarative way of creating resources).
-This is still a work in progress. Cd to `cloud-deployment` and run:
-```
-./gcp-cloud-provision.sh
+#configure transit
+vault secrets enable transit
+cosign generate-key-pair --kms hashivault://ci-system
 ```
 
-Provisioning Gluster CNS
+## Install tekton and tekton chain configured to use cosign + OCI store for attestations
 
-if you desire to provision Gluster CNS export the following variable
-```
-export GLUSTER=yes
-```
-This will create an addtional disk of 200GB in each of the nodes and deploy Gluster CNS there.
-
-
-## Gcloud provisioning
-
-Run the provisioning script.
-
-```
-./provision-gcp.sh
-```
-This will take some time.
-
-## Prepare the bastion host
-
-I've switched to preemptible instances and preemptible instances don't always start when provisioned (a bug?). Go to your google console and make sure all the instances are stared.
-
-Run the prepare bastion script.
-```
-./prepare-bastion.sh
+```sh
+oc apply -f ./openshift-pipelines/operator.yaml
 ```
 
-## Prepare the cluster
+## Configure openshift pipelines
 
-Shell in the bastion host
-```
-ssh -o SendEnv=RHN_USERNAME -o SendEnv=RHN_PASSWORD -o SendEnv=DNS_DOMAIN -o SendEnv=RHN_SUB_POOL -o SendEnv=GLUSTER `gcloud compute addresses list | grep ose-bastion | awk '{print $3}'`
-```
-Run the prepare cluster script
-```
-cd openshift-enablement-exam
-./prepare-cluster.sh
-```
-
-## Setup openshift
-
-Run the ansible playbook
-```
-ansible-playbook -v -i hosts /usr/share/ansible/openshift-ansible/playbooks/byo/config.yml
+```sh
+oc apply -f ./openshift-pipelines/tektonchain.yaml
+oc patch configmap chains-config -n openshift-pipelines -p='{"data":{"artifacts.oci.storage": "oci"}}' 
+oc patch configmap chains-config -n openshift-pipelines -p='{"data":{"artifacts.taskrun.format": "in-toto"}}'
+oc patch configmap chains-config -n openshift-pipelines -p='{"data":{"artifacts.taskrun.storage": "oci"}}'
+oc patch configmap chains-config -n openshift-pipelines -p='{"data":{"transparency.enabled": "false"}}'
+oc patch configmap chains-config -n openshift-pipelines -p='{"data":{"artifacts.pipelinerun.format": "in-toto"}}'
+oc patch configmap chains-config -n openshift-pipelines -p='{"data":{"artifacts.pipelinerun.storage": "oci"}}'
+cosign generate-key-pair k8s://openshift-pipelines/signing-secrets
 ```
 
-## Creating new users
+## Create a simple pipeline to test
 
-The admin/admin user is created by the installer.
-You still have to give it permissions, for example (from one of the masters):
-```
-oc adm policy add-cluster-role-to-user cluster-admin admin
-```
-If you need to add more users, from the bastion host run the following
-```
-ansible 'masters' -i hosts -b -m shell -a "htpasswd -b /etc/origin/master/htpasswd <username> <password>"
-```
-## Clean up
+create the pipeline
 
-To clean up your Google Cloud project type the following:
+```sh
+oc new-project test-sigstore
+oc create secret docker-registry quay-push --docker-username=raffaelespazzoli --docker-password=<password> --docker-server=quay.io -n test-sigstore
+oc patch serviceaccount pipeline -p "{\"imagePullSecrets\": [{\"name\": \"quay-push\"}]}" -n test-sigstore
+oc patch secret quay-push -n test-sigstore -p "{\"data\": {\"config.json\": \"$(oc get secret quay-push -n test-sigstore -o jsonpath={.data."\.dockerconfigjson"})\"}}"
+oc apply -f ./pipeline/syft-task.yaml 
+oc apply -f ./pipeline/grype-task.yaml 
+oc apply -f ./pipeline/pipeline-pvc.yaml -n test-sigstore
+oc apply -f ./pipeline/pipeline-ci.yaml -n test-sigstore
 ```
-./cleanup-gcp.sh
+
+run the pipeline
+
+```sh
+oc create -f ./pipeline/pipeline-ci-run.yaml -n test-sigstore
 ```
-This may take some time.

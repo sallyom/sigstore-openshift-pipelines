@@ -1,9 +1,0 @@
-/auth/
-/cluster1/
-/cluster-azure1/
-/cluster-google1/
-/cluster1-acm/
-/cluster2-acm/
-/cluster2/
-/users.htpasswd
-/openshift-install
