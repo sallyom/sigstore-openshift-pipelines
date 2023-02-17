@@ -33,8 +33,8 @@ spec:
       description: Syft image to be used
       type: string
     - name: COSIGN_IMAGE
-      default: bitnami/cosign:latest
-      description: Cosing image to be used
+      default: quay.io/sallyom/cosign:v2
+      description: Cosign image to be used
       type: string      
   steps:
     - name: syft
@@ -53,8 +53,14 @@ spec:
         - -c 
         - "$(params.COSIGN_SCRIPT)"
       env:
+      - name: AWS_ROLE_SESSION_NAME
+        value: pipeline-session
+      - name: AWS_REGION
+        value: us-east-1
       - name: DOCKER_CONFIG
         value: /dockerconfig
+      - name: TUF_URL
+        value: https://tuf.apps.open-svc-sts.k1wl.p1.openshiftapps.com
       - name: VAULT_ADDR
         value: https://vault.vault.svc:8200
       - name: VAULT_SKIP_VERIFY

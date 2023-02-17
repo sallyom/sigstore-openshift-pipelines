@@ -8,16 +8,18 @@ spec:
   params:
   - name: deployment-name
     value: pipelines-vote-api
+  - name: certificate-identity
+    value: https://kubernetes.io/namespaces/test-sigstore/serviceaccounts/pipeline 
   - name: git-url
     value: https://github.com/openshift/pipelines-vote-api.git
   - name: IMAGE
-    value: quay.io/raffaelespazzoli/pipelines-vote-api
+    value: quay.io/sallyom/pipelines-vote-api
   - name: fulcio-url
-    value: https://fulcio.apps.tmp-raffa.demo.red-chesterfield.com/
+    value: https://fulcio.apps.open-svc-sts.k1wl.p1.openshiftapps.com
   - name: rekor-url
-    value: https://rekor.apps.tmp-raffa.demo.red-chesterfield.com/
+    value: https://rekor.apps.open-svc-sts.k1wl.p1.openshiftapps.com
   - name: oidc-issuer-url
-    value: https://spire-oidc-spire-system.apps.tmp-raffa.demo.red-chesterfield.com  
+    value: https://rh-oidc.s3.us-east-1.amazonaws.com/21o4ml1f5kchd6ee9nmh5dhc6efqba38
   workspaces:
   - name: shared-workspace
     persistentVolumeClaim:
