@@ -10,11 +10,11 @@ metadata:
     tekton.dev/tags: CLI, syft
     tekton.dev/displayName: syft
     tekton.dev/platforms: "linux/amd64,linux/arm64"
-    vault.hashicorp.com/agent-inject: "true"
-    vault.hashicorp.com/agent-pre-populate-only: "true"
-    vault.hashicorp.com/agent-inject-token: "true"
-    vault.hashicorp.com/role: "ci-system"
-    vault.hashicorp.com/tls-skip-verify: "true"
+    #vault.hashicorp.com/agent-inject: "true"
+    #vault.hashicorp.com/agent-pre-populate-only: "true"
+    #vault.hashicorp.com/agent-inject-token: "true"
+    #vault.hashicorp.com/role: "ci-system"
+    #vault.hashicorp.com/tls-skip-verify: "true"
 spec:
   description: >-
    CLI tool and library for generating a Software Bill of Materials from container images and filesystem
@@ -61,10 +61,10 @@ spec:
         value: /dockerconfig
       - name: TUF_URL
         value: https://tuf.apps.open-svc-sts.k1wl.p1.openshiftapps.com
-      - name: VAULT_ADDR
-        value: https://vault.vault.svc:8200
-      - name: VAULT_SKIP_VERIFY
-        value: "true"            
+      #- name: VAULT_ADDR
+      #  value: https://vault.vault.svc:8200
+      #- name: VAULT_SKIP_VERIFY
+      #  value: "true"            
       - name: COSIGN_EXPERIMENTAL
         value: "1"
       volumeMounts:
