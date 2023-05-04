@@ -20,10 +20,6 @@ spec:
   - name: IMAGE
     type: string
     description: image to be build from the code
-  - name: fulcio-url
-    type: string
-  - name: rekor-url
-    type: string
   - name: certificate-identity
     type: string      
   - name: oidc-issuer-url
@@ -81,17 +77,11 @@ spec:
       - spdx-json
       - --file
       - /attestation_tmp/attestation.sbom
-    - name: BUILDAH_SCRIPT
-      value: | 
-        cosign initialize --mirror=$TUF_URL --root=$TUF_URL/root.json
     - name: COSIGN_SCRIPT
       value: | 
-        cosign initialize --mirror=$TUF_URL --root=$TUF_URL/root.json
-        # cosign sign keyless
-        # TODO update tekton chains to initialize with BYO tuf
-        #cosign sign quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --fulcio-url=$(params.fulcio-url) --rekor-url=$(params.rekor-url) --identity-token=$AWS_WEB_IDENTITY_TOKEN_FILE
-        # cosign attest keyless flow
-        cosign attest quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --fulcio-url=$(params.fulcio-url) --rekor-url=$(params.rekor-url) --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$AWS_WEB_IDENTITY_TOKEN_FILE --predicate /attestation_tmp/attestation.sbom --type spdxjson --attachment-tag-prefix sbom-
+        cosign initialize
+        cosign sign quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --identity-token=$(cat $IDENTITY_TOKEN_FILE) --oidc-issuer=$(params.oidc-issuer-url)
+        cosign attest quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$(cat $IDENTITY_TOKEN_FILE) --predicate /attestation_tmp/attestation.sbom --type spdxjson --attachment-tag-prefix sbom-
   - name: create-vulnerability-attestation
     taskRef:
       name: grype
@@ -108,6 +98,6 @@ spec:
       - sarif
     - name: COSIGN_SCRIPT
       value: | 
-        cosign initialize --mirror=$TUF_URL --root=$TUF_URL/root.json
+        cosign initialize
         # cosign attest keyless flow
-        cosign attest quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --fulcio-url=$(params.fulcio-url) --rekor-url=$(params.rekor-url) --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$AWS_WEB_IDENTITY_TOKEN_FILE --predicate /attestation_tmp/attestation.sarif --type https://cosign.sigstore.dev/attestation/vuln/v1 --attachment-tag-prefix sarif-
+        cosign attest quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$(cat $IDENTITY_TOKEN_FILE) --predicate /attestation_tmp/attestation.sarif --type https://cosign.sigstore.dev/attestation/vuln/v1 --attachment-tag-prefix sarif-

@@ -38,10 +38,11 @@ cosign verify-attestation --type https://cosign.sigstore.dev/attestation/vuln/v1
 
 ```bash
 # verify signature
+# image is built in ns tekton-chains and with serviceaccount tekton-chains-controller
 cosign verify $IMAGE \
     --certificate-oidc-issuer $OIDC_ISSUER_URL \
     --rekor-url https://rekor.$BASE \
-    --certificate-identity https://kubernetes.io/namespaces/$NAMESPACE/serviceaccounts/$SERVICEACCOUNT
+    --certificate-identity https://kubernetes.io/namespaces/tekton-chains/serviceaccounts/tekton-chains-controller
 
 # verify SBOM attestation
 cosign verify-attestation --type spdxjson \
@@ -105,5 +106,5 @@ cosign verify-attestation \
     --certificate-oidc-issuer $OIDC_ISSUER_URL \
     --rekor-url https://rekor.$BASE \
     --certificate-identity https://kubernetes.io/namespaces/$NAMESPACE/serviceaccounts/$SERVICEACCOUNT \
-    $IMAGE | jq '.payload | @base64d | fromjson | .predicate.Data'
+    $IMAGE | jq '.payload | @base64d | fromjson'
 ```
