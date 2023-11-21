@@ -16,7 +16,7 @@ spec:
   - name: git-revision
     type: string
     description: revision to be used from repo of the code for deployment
-    default: pipelines-1.8
+    default: main
   - name: IMAGE
     type: string
     description: image to be build from the code
@@ -76,7 +76,7 @@ spec:
     - name: SYFT_ARGS
       value: 
       - packages
-      - registry:quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST)
+      - registry:quay.io/sallyom/fedora-coreos-custom:38-eln@$(tasks.build-image.results.IMAGE_DIGEST)
       - -o
       - spdx-json
       - --file
@@ -89,18 +89,10 @@ spec:
         # cosign sign with key & issue fulcio-cert
         # TODO update tekton chains to issue certificate
         # I don't think the "keyless w/ self-managed key" flow supports kms?
-        # cosign sign quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --key k8s://test-sigstore/signing-secrets --issue-certificate --fulcio-url=$(params.fulcio-url) --rekor-url=$(params.rekor-url) --identity-token=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE)
-        #
-        # cosign sign keyless
-        # TODO update tekton chains to issue certificate
-        # I don't think the "keyless w/ self-managed key" flow supports kms?
-        cosign sign quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --fulcio-url=$(params.fulcio-url) --rekor-url=$(params.rekor-url) --identity-token=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE)
+        # cosign sign quay.io/sallyom/fedora-coreos-custom@$(tasks.build-image.results.IMAGE_DIGEST) --yes --key k8s://test-sigstore/signing-secrets --issue-certificate --fulcio-url=$(params.fulcio-url) --rekor-url=$(params.rekor-url) --identity-token=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE)
         #
         # cosign attest with key
-        cosign attest quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --key k8s://test-sigstore/signing-secrets --rekor-url $(params.rekor-url) --predicate /attestation_tmp/attestation.sbom --type spdxjson --attachment-tag-prefix sbom-
-        #
-        # cosign attest keyless flow
-        cosign attest quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --fulcio-url=$(params.fulcio-url) --rekor-url=$(params.rekor-url) --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE) --predicate /attestation_tmp/attestation.sbom --type spdxjson --attachment-tag-prefix sbom-
+        cosign attest quay.io/sallyom/fedora-coreos-custom@$(tasks.build-image.results.IMAGE_DIGEST) --yes --key k8s://test-sigstore/signing-secrets --rekor-url $(params.rekor-url) --predicate /attestation_tmp/attestation.sbom --type spdxjson --attachment-tag-prefix sbom-
   - name: create-vulnerability-attestation
     taskRef:
       name: grype
@@ -110,7 +102,7 @@ spec:
     params:
     - name: GRYPE_ARGS
       value: 
-      - registry:quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST)
+      - registry:quay.io/sallyom/fedora-coreos-custom@$(tasks.build-image.results.IMAGE_DIGEST)
       - --file
       - /attestation_tmp/attestation.sarif
       - -o
@@ -121,8 +113,8 @@ spec:
         #export VAULT_TOKEN=$(cat /vault/secrets/token)
         #
         # cosign attest with key
-        cosign attest quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --key k8s://test-sigstore/signing-secrets --predicate /attestation_tmp/attestation.sarif --rekor-url $(params.rekor-url) --type https://cosign.sigstore.dev/attestation/vuln/v1 --attachment-tag-prefix sarif-
+        cosign attest quay.io/sallyom/fedora-coreos-custom@$(tasks.build-image.results.IMAGE_DIGEST) --yes --key k8s://test-sigstore/signing-secrets --predicate /attestation_tmp/attestation.sarif --rekor-url $(params.rekor-url) --type https://cosign.sigstore.dev/attestation/vuln/v1 --attachment-tag-prefix sarif-
         #
         # cosign attest keyless flow
-        cosign attest quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --fulcio-url=$(params.fulcio-url) --rekor-url=$(params.rekor-url) --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE) --predicate /attestation_tmp/attestation.sarif --type https://cosign.sigstore.dev/attestation/vuln/v1 --attachment-tag-prefix sarif-
+        cosign attest quay.io/sallyom/fedora-coreos-custom@$(tasks.build-image.results.IMAGE_DIGEST) --yes --fulcio-url=$(params.fulcio-url) --rekor-url=$(params.rekor-url) --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE) --predicate /attestation_tmp/attestation.sarif --type https://cosign.sigstore.dev/attestation/vuln/v1 --attachment-tag-prefix sarif-
 

@@ -5,7 +5,7 @@ _replace image with your image, and to avoid warnings use digest instead of tag_
 Adjust to match your cluster
 
 ```bash
-export IMAGE=quay.io/sallyom/pipelines-vote-api:latest
+export IMAGE=quay.io/sallyom/fedora-coreos-custom:bootc
 export BASE=apps.open-svc-sts.k1wl.p1.openshiftapps.com
 export SERVICEACCOUNT=pipeline
 export NAMESPACE=test-sigstore

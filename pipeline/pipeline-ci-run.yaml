@@ -3,17 +3,20 @@ kind: PipelineRun
 metadata:
   generateName: build-run-
 spec:
+  timeouts:
+    pipeline: "0h30m0s"
+    finally: "0h30m0s"
   pipelineRef:
     name: build
   params:
   - name: deployment-name
-    value: pipelines-vote-api
+    value: fedora-coreos-custom
   - name: certificate-identity
     value: https://kubernetes.io/namespaces/test-sigstore/serviceaccounts/pipeline 
   - name: git-url
-    value: https://github.com/openshift/pipelines-vote-api.git
+    value: https://github.com/sallyom/edge-imagebuild.git
   - name: IMAGE
-    value: quay.io/sallyom/pipelines-vote-api
+    value: quay.io/sallyom/fedora-coreos-custom
   - name: fulcio-url
     value: https://fulcio.apps.open-svc-sts.k1wl.p1.openshiftapps.com
   - name: rekor-url

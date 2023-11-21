@@ -1,0 +1,6 @@
+oc apply -f ./pipeline/syft-task.yaml
+oc apply -f ./pipeline/grype-task.yaml 
+oc apply -f ./pipeline/pipeline-pvc.yaml -n test-sigstore
+oc apply -f ./pipeline/pipeline-ci.yaml -n test-sigstore
+oc create -f ./pipeline/pipeline-ci-run.yaml -n test-sigstore
+

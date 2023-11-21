@@ -16,7 +16,7 @@ spec:
   - name: git-revision
     type: string
     description: revision to be used from repo of the code for deployment
-    default: pipelines-1.8
+    default: main
   - name: IMAGE
     type: string
     description: image to be build from the code
@@ -72,7 +72,7 @@ spec:
     - name: SYFT_ARGS
       value: 
       - packages
-      - registry:quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST)
+      - registry:quay.io/sallyom/pacman@$(tasks.build-image.results.IMAGE_DIGEST)
       - -o
       - spdx-json
       - --file
@@ -80,8 +80,8 @@ spec:
     - name: COSIGN_SCRIPT
       value: | 
         cosign initialize
-        cosign sign quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --identity-token=$(cat $IDENTITY_TOKEN_FILE) --oidc-issuer=$(params.oidc-issuer-url)
-        cosign attest quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$(cat $IDENTITY_TOKEN_FILE) --predicate /attestation_tmp/attestation.sbom --type spdxjson --attachment-tag-prefix sbom-
+        cosign sign quay.io/sallyom/pacman@$(tasks.build-image.results.IMAGE_DIGEST) --yes --identity-token=$(cat $IDENTITY_TOKEN_FILE) --oidc-issuer=$(params.oidc-issuer-url)
+        cosign attest quay.io/sallyom/pacman@$(tasks.build-image.results.IMAGE_DIGEST) --yes --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$(cat $IDENTITY_TOKEN_FILE) --predicate /attestation_tmp/attestation.sbom --type spdxjson --attachment-tag-prefix sbom-
   - name: create-vulnerability-attestation
     taskRef:
       name: grype
@@ -91,7 +91,7 @@ spec:
     params:
     - name: GRYPE_ARGS
       value: 
-      - registry:quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST)
+      - registry:quay.io/sallyom/pacman@$(tasks.build-image.results.IMAGE_DIGEST)
       - --file
       - /attestation_tmp/attestation.sarif
       - -o
@@ -100,4 +100,4 @@ spec:
       value: | 
         cosign initialize
         # cosign attest keyless flow
-        cosign attest quay.io/sallyom/pipelines-vote-api@$(tasks.build-image.results.IMAGE_DIGEST) --yes --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$(cat $IDENTITY_TOKEN_FILE) --predicate /attestation_tmp/attestation.sarif --type https://cosign.sigstore.dev/attestation/vuln/v1 --attachment-tag-prefix sarif-
+        cosign attest quay.io/sallyom/pacman@$(tasks.build-image.results.IMAGE_DIGEST) --yes --oidc-issuer=$(params.oidc-issuer-url) --identity-token=$(cat $IDENTITY_TOKEN_FILE) --predicate /attestation_tmp/attestation.sarif --type https://cosign.sigstore.dev/attestation/vuln/v1 --attachment-tag-prefix sarif-
